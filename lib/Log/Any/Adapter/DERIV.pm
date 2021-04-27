@@ -127,9 +127,19 @@ $SIG{__WARN__} = sub {
     # We don't expect anything called from here to raise further warnings, but
     # let's be safe and try to avoid any risk of recursion
     local $SIG{__WARN__} = undef;
-
     chomp(my $msg = shift);
     $log->warn($msg);
+};
+
+# Upgrade any `die...` lines to send through Log::Any.
+$SIG{__DIE__} = sub {
+    chomp(my $msg = shift);
+    my $i = 1;
+    # will ignore if die is in eval or try block
+    while ( (my @call_details = (caller($i++))) ){
+        return if $call_details[3] eq '(eval)';
+    }
+    $log->error($msg);
 };
 
 sub new {
@@ -140,8 +150,10 @@ sub new {
     # There are other ways of running containers, but for now "in docker? generate JSON"
     # is at least a starting point.
     $self->{in_container} = -r '/.dockerenv';
-    unless($self->{in_container}) {
-        $self->{fh} = path($0 . '.json.log')->opena_utf8 or die 'unable to open log file - ' . $!;
+    my $json_log_file = $self->{json_log_file};
+    $json_log_file = $0 . '.json.log' if(!$json_log_file && !$self->{in_container});
+    if($json_log_file) {
+        $self->{fh} = path($json_log_file)->opena_utf8 or die 'unable to open log file - ' . $!;
         $self->{fh}->autoflush(1);
     }
 
