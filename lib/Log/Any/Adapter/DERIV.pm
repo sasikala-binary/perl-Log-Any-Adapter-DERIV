@@ -17,6 +17,21 @@ use utf8;
 
 Log::Any::Adapter::DERIV - standardised logging to STDERR and JSON file
 
+=head1 SYNOPSIS
+
+    use Log::Any;
+    # print text log to STDERR, json format when inside docker container , colored text format when STDERR is a tty, non-colored text format when STDERR is redirected.
+    use Log::Any::Adapter ('DERIV');
+
+    #specify STDERR directly
+    use Log::Any::Adapter ('DERIV', stderr => 1)
+
+    #specify STDERR's format
+    use Log::Any::Adapter ('DERIV', stderr => 'json')
+
+    #specify the json log name
+    use Log::Any::Adapter ('DERIV', json_log_file => '/var/log/program.json.log');
+
 =head1 DESCRIPTION
 
 Applies some opinionated log handling rules for L<Log::Any>.
@@ -28,7 +43,7 @@ in various ways:
 
 =item * applies UTF-8 encoding to STDERR
 
-=item * writes to a C<.json.log> file named for the current process
+=item * writes to a C<.json.log> file.
 
 =item * overrides the default L<Log::Any::Proxy> formatter to provide data as JSON
 
@@ -56,6 +71,28 @@ their own version or make feature/bugfix suggestions if they seem generally usef
 
 L<https://github.com/binary-com/perl-Log-Any-Adapter-DERIV>
 
+=head2 PARAMETERS
+
+=over 4
+
+=item * json_log_file
+
+Specify a file name that the json format log file will be printed into.
+If not given, then a default file 'program_name.json.log' will be used.
+
+=item * STDERR
+
+If it is true, then print logs to STDERR
+
+If the value is json or text, then print logs with that format
+
+If the value is just a true value other than `json` or `text`, then if it is running in a container,
+then the logs is `json` format. Else if STDERR is a tty will be `colored text` format. Else if will be a non-color text format.
+
+=back
+
+If no any parameter, then default `stderr => 1`;
+
 =cut
 
 use Time::Moment;
@@ -69,7 +106,7 @@ use Log::Any qw($log);
 # Used for stringifying data more neatly than Data::Dumper might offer
 our $JSON = JSON::MaybeXS->new(
     # Multi-line for terminal output, single line if redirecting somewhere
-    pretty          => (-t STDERR),
+    pretty          => _stderr_is_tty(),
     # Be consistent
     canonical       => 1,
     # Try a bit harder to give useful output
@@ -144,18 +181,21 @@ $SIG{__DIE__} = sub {
 
 sub new {
     my ( $class, %args ) = @_;
-    $args{colour} //= -t STDERR;
+    $args{colour} //= _stderr_is_tty();
     my $self = $class->SUPER::new(sub { }, %args);
-
-    # There are other ways of running containers, but for now "in docker? generate JSON"
-    # is at least a starting point.
-    $self->{in_container} = -r '/.dockerenv';
-    my $json_log_file = $self->{json_log_file};
-    $json_log_file = $0 . '.json.log' if(!$json_log_file && !$self->{in_container});
-    if($json_log_file) {
-        $self->{fh} = path($json_log_file)->opena_utf8 or die 'unable to open log file - ' . $!;
-        $self->{fh}->autoflush(1);
+    # if there is json_log_file, then print json to that file
+    if($self->{json_log_file}) {
+        $self->{json_fh} = path($self->{json_log_file})->opena_utf8 or die 'unable to open log file - ' . $!;
+        $self->{json_fh}->autoflush(1);
     }
+    # if there is stderr, then print log to stderr also
+    # if stderr is json or text, then use that format
+    # else, if it is in_container, then json, else text
+    if(!$self->{json_log_file} && !$self->{stderr}){
+        $self->{stderr} = 1;
+    }
+    # docker tends to prefer JSON
+    $self->{stderr} = _in_container() ? 'json' : 'text' if ($self->{stderr} && $self->{stderr} ne 'json' && $self->{stderr} ne 'text');
 
     # Keep a strong reference to this, since we expect to stick around until exit anyway
     $self->{code} = $self->curry::log_entry;
@@ -234,14 +274,16 @@ sub format_line {
 sub log_entry {
     my ($self, $data) = @_;
 
+    $self->{json_fh}->print(encode_json_text($data) . "\n") if $self->{json_fh};
+
+    return unless $self->{stderr};
+
     unless($self->{has_stderr_utf8}) {
         $self->apply_filehandle_utf8(\*STDERR);
         $self->{has_stderr_utf8} = 1;
     }
 
-    $self->{fh}->print(encode_json_text($data) . "\n") if $self->{fh};
-
-    my $txt = $self->{in_container} # docker tends to prefer JSON
+    my $txt = $self->{stderr} eq 'json'
     ? encode_json_text($data)
     : $self->format_line($data, { colour => $self->{colour} });
 
@@ -251,6 +293,13 @@ sub log_entry {
     );
 }
 
+sub _stderr_is_tty{
+    return -t STDERR;
+}
+
+sub _in_container{
+    return -r '/.dockerenv';
+}
 1;
 
 =head1 AUTHOR
@@ -260,4 +309,3 @@ Deriv Group Services Ltd. C<< DERIV@cpan.org >>
 =head1 LICENSE
 
 Copyright Deriv Group Services Ltd 2020-2021. Licensed under the same terms as Perl itself.
-
