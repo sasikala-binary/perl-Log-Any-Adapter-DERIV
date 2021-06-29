@@ -273,6 +273,7 @@ sub format_line {
 
 sub log_entry {
     my ($self, $data) = @_;
+    $data = $self->collapse_future_stack($data);
 
     $self->{json_fh}->print(encode_json_text($data) . "\n") if $self->{json_fh};
 
@@ -293,6 +294,35 @@ sub log_entry {
     );
 }
 
+
+=head2 collapse_future_stack
+
+The future frames are too much and too tedious. This method will keep only one frame if there are many continuously future frames.
+Parameter: log data
+Return: log data
+
+=cut
+
+sub collapse_future_stack{
+    my ($self, $data) = @_;
+    my $stack = $data->{stack};
+    my @new_stack;
+    my $previous_is_future;
+    for my  $frame ($stack->@*){
+        if($frame->{package} eq 'Future'){
+            next if($previous_is_future);
+            push @new_stack, $frame;
+            $previous_is_future = 1;
+        }
+        else{
+            push @new_stack, $frame;
+            $previous_is_future = 0;
+        }
+    }
+    $data->{stack} = \@new_stack;
+    return $data;
+}
+
 sub _stderr_is_tty{
     return -t STDERR;
 }
@@ -300,6 +330,7 @@ sub _stderr_is_tty{
 sub _in_container{
     return -r '/.dockerenv';
 }
+
 1;
 
 =head1 AUTHOR
