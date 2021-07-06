@@ -9,7 +9,7 @@ use Future;
 use JSON::MaybeUTF8 qw(:v1);
 use Clone qw(clone);
 
-subtest 'collapse_future_stack' => sub {
+subtest '_collapse_future_stack' => sub {
     my $sample_stack = [
         {
             'line' => 451,
@@ -35,7 +35,7 @@ subtest 'collapse_future_stack' => sub {
     # remove the outest stack frame
     my $expected_stack = [@$sample_stack[0,2,0,2]];
     is_deeply(
-        Log::Any::Adapter::DERIV->collapse_future_stack(
+        Log::Any::Adapter::DERIV->_collapse_future_stack(
             { stack => $arg_stack }
         ),
         { stack => $expected_stack },
@@ -46,7 +46,7 @@ subtest 'collapse_future_stack' => sub {
     $expected_stack = clone($arg_stack);
     pop $expected_stack->@*;
     is_deeply(
-        Log::Any::Adapter::DERIV->collapse_future_stack(
+        Log::Any::Adapter::DERIV->_collapse_future_stack(
             { stack => $arg_stack }
         ),
         { stack => $expected_stack },

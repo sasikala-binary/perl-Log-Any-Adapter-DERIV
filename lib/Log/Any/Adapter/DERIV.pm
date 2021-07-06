@@ -102,8 +102,12 @@ use JSON::MaybeUTF8 qw(:v1);
 use PerlIO;
 use Term::ANSIColor;
 use Log::Any qw($log);
+use Log::Any::Adapter::Util qw(numeric_level);
+use Clone qw(clone);
+
 
 # Used for stringifying data more neatly than Data::Dumper might offer
+
 our $JSON = JSON::MaybeXS->new(
     # Multi-line for terminal output, single line if redirecting somewhere
     pretty          => _stderr_is_tty(),
@@ -273,7 +277,7 @@ sub format_line {
 
 sub log_entry {
     my ($self, $data) = @_;
-    $data = $self->collapse_future_stack($data);
+    $data = $self->_process_data($data);
 
     $self->{json_fh}->print(encode_json_text($data) . "\n") if $self->{json_fh};
 
@@ -294,8 +298,65 @@ sub log_entry {
     );
 }
 
+=head2 _process_data
 
-=head2 collapse_future_stack
+Process the data before printing out.
+
+Takes the following arguments as named parameters:
+
+=over 4
+
+=item * C<$self>
+
+=item * C<data>
+
+The log data.
+
+=back
+
+Return: processed data
+
+=cut
+
+sub _process_data {
+    my ($self, $data) = @_;
+    $data = clone($data);
+    $data = $self->_collapse_future_stack($data);
+    $data = $self->_filter_stack($data);
+    return $data;
+}
+
+=head2 _filter_stack
+
+In some cases we don't want to print stack info. This function is used to filter out the stack info.
+
+Takes the following arguments as named parameters:
+
+=over 4
+
+=item * C<$self>
+
+=item * C<data>
+
+The log data.
+
+=back
+
+Return: processed data
+
+
+=cut
+
+sub _filter_stack {
+    my ($self, $data) = @_;
+    return $data if(numeric_level($data->{severity}) <= numeric_level('warn'));
+    # now severity > warn
+    return $data if $self->{log_level} >= numeric_level('debug');
+    delete $data->{stack};
+    return $data;
+}
+
+=head2 _collapse_future_stack
 
 The future frames are too much and too tedious. This method will keep only one frame if there are many continuously future frames.
 Parameter: log data
@@ -303,7 +364,7 @@ Return: log data
 
 =cut
 
-sub collapse_future_stack{
+sub _collapse_future_stack{
     my ($self, $data) = @_;
     my $stack = $data->{stack};
     my @new_stack;
@@ -323,11 +384,11 @@ sub collapse_future_stack{
     return $data;
 }
 
-sub _stderr_is_tty{
-    return -t STDERR;
+sub _stderr_is_tty {
+   return -t STDERR;
 }
 
-sub _in_container{
+sub _in_container {
     return -r '/.dockerenv';
 }
 
