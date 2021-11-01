@@ -217,6 +217,16 @@ sub new {
     return $self;
 }
 
+=head2 apply_filehandle_utf8
+
+=over 4
+
+=item * C<$fh> file handle
+
+=back
+
+=cut
+
 sub apply_filehandle_utf8 {
     my ($class, $fh) = @_;
     # We'd expect `encoding(utf-8-strict)` and `utf8` if someone's already applied binmode
@@ -228,6 +238,22 @@ sub apply_filehandle_utf8 {
         unless grep /utf/i, PerlIO::get_layers($fh, output => 1);
     $fh->autoflush(1);
 }
+
+=head2 format_line
+
+Format the log entry
+
+=over 4
+
+=item * C<$data> log data -severity, message, stack
+
+=item * C<$opts> options - color
+
+=back
+
+Returns the color details for log
+
+=cut
 
 sub format_line {
     my ($class, $data, $opts) = @_;
@@ -286,6 +312,18 @@ sub format_line {
         } @details;
 }
 
+=head 2 log_entry
+
+Writes the log entry
+
+=over 4
+
+=item *C<$data> log data
+
+=back
+
+=cut
+
 sub log_entry {
     my ($self, $data) = @_;
     $data = $self->_process_data($data);
@@ -326,7 +364,7 @@ The log data.
 
 =back
 
-Return: processed data
+Returns processed data
 
 =cut
 
@@ -354,8 +392,7 @@ The log data.
 
 =back
 
-Return: processed data
-
+Returns processed data
 
 =cut
 
@@ -370,13 +407,23 @@ sub _filter_stack {
 
 =head2 _collapse_future_stack
 
-The future frames are too much and too tedious. This method will keep only one frame if there are many continuously future frames.
-Parameter: log data
-Return: log data
+The future L<FUTURE> frames are too much and too tedious. This method will keep only one
+frame if there are many continuously future frames.
+
+Takes the following arguments as named parameters
+
+=over 4
+
+=item * C<stack>
+Log stack data
+
+=back
+
+Returns log data
 
 =cut
 
-sub _collapse_future_stack{
+sub _collapse_future_stack {
     my ($self, $data) = @_;
     my $stack = $data->{stack};
     my @new_stack;
@@ -396,10 +443,24 @@ sub _collapse_future_stack{
     return $data;
 }
 
+=head2 _fh_is_tty
+
+Check the filehandle opened to tty
+Returns boolean
+
+=cut
+
 sub _fh_is_tty {
     my $fh = shift;
    return -t $fh;
 }
+
+=head2 _in_container
+
+Checks in the container
+Returns boolean
+
+=cut
 
 sub _in_container {
     return -r '/.dockerenv';
@@ -407,9 +468,13 @@ sub _in_container {
 
 =head2 _linux_flock_data
 
-Param: lock type. It can be F_WRLCK or F_UNLCK
+=over 4
 
-return: A FLOCK structure
+=item * C<$type> lock type - F_WRLCK or F_UNLCK
+
+=back
+
+Returns a FLOCK structure
 
 =cut
 
@@ -424,17 +489,15 @@ sub _linux_flock_data {
 
 call fcntl to lock or unlock a file handle
 
-Param:
-
 =over 4
 
-=item fh - file handle
+=item * C<$fh> file handle
 
-=item type - lock type, either F_WRLCK or F_UNLCK
+=item * C<$type> lock type, either F_WRLCK or F_UNLCK
 
 =back
 
-Return : true or false
+Returns boolean or undef
 
 =cut
 
@@ -450,17 +513,22 @@ sub _flock {
     print STDERR "F_SETLKW @_: $!\n";
     return undef;
 }
+
 =head2 _lock
 
 Lock a file handler with fcntl.
 
-Param: fh - File handle
+=over 4
 
-Return: true or false
+=item * C<$fh> File handle
+
+=back
+
+Returns boolean
 
 =cut
 
-sub _lock{
+sub _lock {
     my ($fh) = @_;
     return _flock($fh, F_WRLCK);
 }
@@ -469,15 +537,21 @@ sub _lock{
 
 Unlock a file handler locked by fcntl
 
-Param: fh - File handle
-Return: true or false
+=over 4
+
+=item * C<$fh> File handle
+
+=back
+
+Returns boolean
 
 =cut
 
-sub _unlock{
+sub _unlock {
     my ($fh) = @_;
     return _flock($fh, F_UNLCK);
 }
+
 =head2 level
 
 return the current log level name
