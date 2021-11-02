@@ -21,7 +21,9 @@ Log::Any::Adapter::DERIV - standardised logging to STDERR and JSON file
 =head1 SYNOPSIS
 
     use Log::Any;
-    # print text log to STDERR, json format when inside docker container , colored text format when STDERR is a tty, non-colored text format when STDERR is redirected.
+    # print text log to STDERR, json format when inside docker container,
+    # colored text format when STDERR is a tty, non-colored text format when
+    # STDERR is redirected.
     use Log::Any::Adapter ('DERIV');
 
     #specify STDERR directly
@@ -156,8 +158,8 @@ our %SEVERITY_COLOUR = (
         s{\n}{\n  }g for @new_params;
 
         # Perl 5.22 adds a 'redundant' warning if the number parameters exceeds
-        # the number of sprintf placeholders.  If a user does this, the warning
-        # is issued from here, which isn't very helpful.  Doing something
+        # the number of sprintf placeholders. If a user does this, the warning
+        # is issued from here, which isn't very helpful. Doing something
         # clever would be expensive, so instead we just disable warnings for
         # the final line of this subroutine.
         no warnings;
@@ -179,7 +181,7 @@ $SIG{__DIE__} = sub {
     chomp(my $msg = shift);
     my $i = 1;
     # will ignore if die is in eval or try block
-    while ( (my @call_details = (caller($i++))) ){
+    while (my @call_details = (caller($i++))) {
         return if $call_details[3] eq '(eval)';
     }
     $log->error($msg);
@@ -189,20 +191,20 @@ sub new {
     my ( $class, %args ) = @_;
     my $self = $class->SUPER::new(sub { }, %args);
     # if there is json_log_file, then print json to that file
-    if($self->{json_log_file}) {
+    if ($self->{json_log_file}) {
         $self->{json_fh} = path($self->{json_log_file})->opena_utf8 or die 'unable to open log file - ' . $!;
         $self->{json_fh}->autoflush(1);
     }
     # if there is stderr, then print log to stderr also
     # if stderr is json or text, then use that format
     # else, if it is in_container, then json, else text
-    if(!$self->{json_log_file} && !$self->{stderr}){
+    if (!$self->{json_log_file} && !$self->{stderr}) {
         $self->{stderr} = 1;
     }
 
-    for my $stdfile (['stderr', \*STDERR], ['stdout', \*STDOUT]){
+    for my $stdfile (['stderr', \*STDERR], ['stdout', \*STDOUT]) {
         my ($name, $fh) = $stdfile->@*;
-        if($self->{$name}) {
+        if ($self->{$name}) {
            $self->{$name} = {format => $self->{$name}} if ref($self->{$name}) ne 'HASH';
            # docker tends to prefer JSON
            $self->{$name}{format} = _in_container() ? 'json' : 'text' if (!$self->{$name}{format} || $self->{$name}{format} ne 'json' && $self->{$name}{format} ne 'text');
@@ -331,12 +333,12 @@ sub log_entry {
     my %text_data = ();
     my $get_json = sub {$json_data //= encode_json_text($data) . "\n"; return $json_data;};
     my $get_text = sub {my $color = shift // 0; $text_data{$color} //= $self->format_line($data, { color => $color }) . "\n"; return $text_data{$color};};
-    if($self->{json_fh}){
+    if ($self->{json_fh}) {
         _lock($self->{json_fh});
         $self->{json_fh}->print($get_json->());
         _unlock($self->{json_fh});
     }
-    for my $stdfile (qw(stderr stdout)){
+    for my $stdfile (qw(stderr stdout)) {
         next unless $self->{$stdfile};
         my $txt = $self->{$stdfile}{format} eq 'json'
         ? $get_json->()
@@ -398,7 +400,7 @@ Returns processed data
 
 sub _filter_stack {
     my ($self, $data) = @_;
-    return $data if(numeric_level($data->{severity}) <= numeric_level('warn'));
+    return $data if (numeric_level($data->{severity}) <= numeric_level('warn'));
     # now severity > warn
     return $data if $self->{log_level} >= numeric_level('debug');
     delete $data->{stack};
@@ -428,13 +430,12 @@ sub _collapse_future_stack {
     my $stack = $data->{stack};
     my @new_stack;
     my $previous_is_future;
-    for my  $frame ($stack->@*){
-        if($frame->{package} eq 'Future'){
-            next if($previous_is_future);
+    for my $frame ($stack->@*) {
+        if ($frame->{package} eq 'Future') {
+            next if ($previous_is_future);
             push @new_stack, $frame;
             $previous_is_future = 1;
-        }
-        else{
+        } else {
             push @new_stack, $frame;
             $previous_is_future = 0;
         }
@@ -452,7 +453,7 @@ Returns boolean
 
 sub _fh_is_tty {
     my $fh = shift;
-   return -t $fh;
+    return -t $fh;
 }
 
 =head2 _in_container
