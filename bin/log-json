@@ -33,9 +33,6 @@ $opts->{colour} = 1 if -t STDOUT;
 
 while (<>) {
     chomp;
-    print Log::Any::Adapter::DERIV->format_line(
-        decode_json_text($_),
-        $opts
-    ) . "\n";
+    print Log::Any::Adapter::DERIV->format_line(decode_json_text($_), $opts) . "\n";
 }
 

@@ -112,13 +112,12 @@ use Fcntl qw(:DEFAULT :seek :flock);
 use Log::Any::Adapter::Util qw(numeric_level logging_methods);
 use Clone qw(clone);
 
-
 # Used for stringifying data more neatly than Data::Dumper might offer
 our $JSON = JSON::MaybeXS->new(
     # Multi-line for terminal output, single line if redirecting somewhere
-    pretty          => _fh_is_tty(\*STDERR),
+    pretty => _fh_is_tty(\*STDERR),
     # Be consistent
-    canonical       => 1,
+    canonical => 1,
     # Try a bit harder to give useful output
     convert_blessed => 1,
 );
@@ -149,12 +148,13 @@ our %SEVERITY_COLOUR = (
 
     # Mostly copied from Log::Any::Proxy
     *Log::Any::Proxy::_default_formatter = sub {
-        my ( $cat, $lvl, $format, @params ) = @_;
+        my ($cat, $lvl, $format, @params) = @_;
         return $format->() if ref($format) eq 'CODE';
 
         chomp(
             my @new_params = map {
-                eval { $JSON->encode($_) } // Log::Any::Proxy::_stringify_params($_)
+                eval { $JSON->encode($_) }
+                    // Log::Any::Proxy::_stringify_params($_)
             } @params
         );
         s{\n}{\n  }g for @new_params;
@@ -165,7 +165,7 @@ our %SEVERITY_COLOUR = (
         # clever would be expensive, so instead we just disable warnings for
         # the final line of this subroutine.
         no warnings;
-        return sprintf( $format, @new_params );
+        return sprintf($format, @new_params);
     };
 }
 
@@ -190,7 +190,7 @@ $SIG{__DIE__} = sub {
 };
 
 sub new {
-    my ( $class, %args ) = @_;
+    my ($class, %args) = @_;
     my $self = $class->SUPER::new(sub { }, %args);
 
     # if there is json_log_file, then print json to that file
@@ -209,12 +209,13 @@ sub new {
     for my $stdfile (['stderr', \*STDERR], ['stdout', \*STDOUT]) {
         my ($name, $fh) = $stdfile->@*;
         if ($self->{$name}) {
-           $self->{$name} = {format => $self->{$name}} if ref($self->{$name}) ne 'HASH';
-           # docker tends to prefer JSON
-           $self->{$name}{format} = _in_container() ? 'json' : 'text' if (!$self->{$name}{format} || $self->{$name}{format} ne 'json' && $self->{$name}{format} ne 'text');
-           $self->apply_filehandle_utf8($fh);
-           $self->{$name}{fh} = $fh;
-           $self->{$name}{color} //= _fh_is_tty($fh);
+            $self->{$name} = {format => $self->{$name}} if ref($self->{$name}) ne 'HASH';
+            # docker tends to prefer JSON
+            $self->{$name}{format} = _in_container() ? 'json' : 'text'
+                if (!$self->{$name}{format} || $self->{$name}{format} ne 'json' && $self->{$name}{format} ne 'text');
+            $self->apply_filehandle_utf8($fh);
+            $self->{$name}{fh} = $fh;
+            $self->{$name}{color} //= _fh_is_tty($fh);
         }
     }
 
@@ -281,12 +282,8 @@ sub format_line {
     my $from = $data->{stack}[-1] ? join '->', @{$data->{stack}[-1]}{qw(package method)} : 'main';
 
     # Start with the plain-text details
-    my @details = (
-        Time::Moment->from_epoch($data->{epoch})->strftime('%Y-%m-%dT%H:%M:%S%3f'),
-        uc(substr $data->{severity}, 0, 1),
-        "[$from]",
-        $data->{message},
-    );
+    my @details = (Time::Moment->from_epoch($data->{epoch})->strftime('%Y-%m-%dT%H:%M:%S%3f'), uc(substr $data->{severity}, 0, 1), "[$from]",
+        $data->{message},);
 
     # This is good enough if we're in non-colour mode
     return join ' ', @details unless $opts->{colour};
@@ -299,25 +296,7 @@ sub format_line {
     my ($ts, $level) = splice @details, 0, 2;
     $from = shift @details;
 
-    return join ' ',
-        colored(
-            $ts,
-            qw(bright_blue),
-        ),
-        colored(
-            $level,
-            @colours,
-        ),
-        colored(
-            $from,
-            qw(grey10)
-        ),
-        map {
-            colored(
-                $_,
-                @colours,
-            ),
-        } @details;
+    return join ' ', colored($ts, qw(bright_blue),), colored($level, @colours,), colored($from, qw(grey10)), map { colored($_, @colours,), } @details;
 }
 
 =head2 log_entry
@@ -337,8 +316,9 @@ sub log_entry {
     $data = $self->_process_data($data);
     my $json_data;
     my %text_data = ();
-    my $get_json = sub {$json_data //= encode_json_text($data) . "\n"; return $json_data;};
-    my $get_text = sub {my $color = shift // 0; $text_data{$color} //= $self->format_line($data, { color => $color }) . "\n"; return $text_data{$color};};
+    my $get_json  = sub { $json_data //= encode_json_text($data) . "\n"; return $json_data; };
+    my $get_text =
+        sub { my $color = shift // 0; $text_data{$color} //= $self->format_line($data, {color => $color}) . "\n"; return $text_data{$color}; };
 
     if ($self->{json_fh}) {
         _lock($self->{json_fh});
@@ -348,9 +328,10 @@ sub log_entry {
 
     for my $stdfile (qw(stderr stdout)) {
         next unless $self->{$stdfile};
-        my $txt = $self->{$stdfile}{format} eq 'json'
-        ? $get_json->()
-        : $get_text->($self->{$stdfile}{color});
+        my $txt =
+              $self->{$stdfile}{format} eq 'json'
+            ? $get_json->()
+            : $get_text->($self->{$stdfile}{color});
         my $fh = $self->{$stdfile}{fh};
 
         _lock($fh);
@@ -525,7 +506,7 @@ Returns boolean or undef
 # Using fcntl to lock a file can avoid this problem
 sub _flock {
     my ($fh, $type) = @_;
-    my $lock = _linux_flock_data($type);
+    my $lock   = _linux_flock_data($type);
     my $result = fcntl($fh, F_SETLKW, $lock);
 
     return $result if $result;
@@ -582,9 +563,9 @@ return the current log level name
 =cut
 
 sub level {
-    my $self = shift;
-    my @methods = reverse logging_methods();
-    my %num_to_name = map {$_ => $methods[$_]} 0..$#methods;
+    my $self        = shift;
+    my @methods     = reverse logging_methods();
+    my %num_to_name = map { $_ => $methods[$_] } 0 .. $#methods;
 
     return $num_to_name{$self->{log_level}};
 }
