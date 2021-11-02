@@ -314,7 +314,7 @@ sub format_line {
         } @details;
 }
 
-=head 2 log_entry
+=head2 log_entry
 
 Writes the log entry
 
