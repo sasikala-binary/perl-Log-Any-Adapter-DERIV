@@ -21,6 +21,7 @@ Log::Any::Adapter::DERIV - standardised logging to STDERR and JSON file
 =head1 SYNOPSIS
 
     use Log::Any;
+
     # print text log to STDERR, json format when inside docker container,
     # colored text format when STDERR is a tty, non-colored text format when
     # STDERR is redirected.
@@ -61,10 +62,9 @@ not currently implemented.
 
 =head2 Why
 
-This is provided as a CPAN module as an example for dealing with multiple outputs and
-formatting. The existing L<Log::Any::Adapter> modules tend to cover one thing, and it's
-not immediately obvious how to extend formatting, or send data to multiple logging mechanisms
-at once.
+This is provided as a CPAN module as an example for dealing with multiple outputs and formatting.
+The existing L<Log::Any::Adapter> modules tend to cover one thing, and it's
+not immediately obvious how to extend formatting, or send data to multiple logging mechanisms at once.
 
 Although the module may not be directly useful, it is hoped that other teams may find
 parts of the code useful for their own logging requirements.
@@ -89,8 +89,10 @@ If it is true, then print logs to STDERR
 
 If the value is json or text, then print logs with that format
 
-If the value is just a true value other than `json` or `text`, then if it is running in a container,
-then the logs is `json` format. Else if STDERR is a tty will be `colored text` format. Else if will be a non-color text format.
+If the value is just a true value other than `json` or `text`,
+then if it is running in a container, then the logs is `json` format.
+Else if STDERR is a tty will be `colored text` format.
+Else if will be a non-color text format.
 
 =back
 
@@ -190,11 +192,13 @@ $SIG{__DIE__} = sub {
 sub new {
     my ( $class, %args ) = @_;
     my $self = $class->SUPER::new(sub { }, %args);
+
     # if there is json_log_file, then print json to that file
     if ($self->{json_log_file}) {
         $self->{json_fh} = path($self->{json_log_file})->opena_utf8 or die 'unable to open log file - ' . $!;
         $self->{json_fh}->autoflush(1);
     }
+
     # if there is stderr, then print log to stderr also
     # if stderr is json or text, then use that format
     # else, if it is in_container, then json, else text
@@ -259,6 +263,7 @@ Returns the color details for log
 
 sub format_line {
     my ($class, $data, $opts) = @_;
+
     # With international development teams, no matter which spelling we choose
     # someone's going to get this wrong sooner or later... or to put another
     # way, we got country *and* western.
@@ -293,6 +298,7 @@ sub format_line {
     local $Term::ANSIColor::EACHLINE = "\n";
     my ($ts, $level) = splice @details, 0, 2;
     $from = shift @details;
+
     return join ' ',
         colored(
             $ts,
@@ -333,17 +339,20 @@ sub log_entry {
     my %text_data = ();
     my $get_json = sub {$json_data //= encode_json_text($data) . "\n"; return $json_data;};
     my $get_text = sub {my $color = shift // 0; $text_data{$color} //= $self->format_line($data, { color => $color }) . "\n"; return $text_data{$color};};
+
     if ($self->{json_fh}) {
         _lock($self->{json_fh});
         $self->{json_fh}->print($get_json->());
         _unlock($self->{json_fh});
     }
+
     for my $stdfile (qw(stderr stdout)) {
         next unless $self->{$stdfile};
         my $txt = $self->{$stdfile}{format} eq 'json'
         ? $get_json->()
         : $get_text->($self->{$stdfile}{color});
         my $fh = $self->{$stdfile}{fh};
+
         _lock($fh);
         $fh->print($txt);
         _unlock($fh);
@@ -372,9 +381,11 @@ Returns processed data
 
 sub _process_data {
     my ($self, $data) = @_;
+
     $data = clone($data);
     $data = $self->_collapse_future_stack($data);
     $data = $self->_filter_stack($data);
+
     return $data;
 }
 
@@ -400,9 +411,12 @@ Returns processed data
 
 sub _filter_stack {
     my ($self, $data) = @_;
+
     return $data if (numeric_level($data->{severity}) <= numeric_level('warn'));
+
     # now severity > warn
     return $data if $self->{log_level} >= numeric_level('debug');
+
     delete $data->{stack};
     return $data;
 }
@@ -416,8 +430,7 @@ Takes the following arguments as named parameters
 
 =over 4
 
-=item * C<stack>
-Log stack data
+=item * C<$data> Log stack data
 
 =back
 
@@ -430,6 +443,7 @@ sub _collapse_future_stack {
     my $stack = $data->{stack};
     my @new_stack;
     my $previous_is_future;
+
     for my $frame ($stack->@*) {
         if ($frame->{package} eq 'Future') {
             next if ($previous_is_future);
@@ -441,6 +455,7 @@ sub _collapse_future_stack {
         }
     }
     $data->{stack} = \@new_stack;
+
     return $data;
 }
 
@@ -453,6 +468,7 @@ Returns boolean
 
 sub _fh_is_tty {
     my $fh = shift;
+
     return -t $fh;
 }
 
@@ -483,6 +499,7 @@ Returns a FLOCK structure
 sub _linux_flock_data {
     my ($type) = @_;
     my $FLOCK_STRUCT = "s s l l i";
+
     return pack($FLOCK_STRUCT, $type, SEEK_SET, 0, 0, 0);
 }
 
@@ -510,8 +527,11 @@ sub _flock {
     my ($fh, $type) = @_;
     my $lock = _linux_flock_data($type);
     my $result = fcntl($fh, F_SETLKW, $lock);
+
     return $result if $result;
+
     print STDERR "F_SETLKW @_: $!\n";
+
     return undef;
 }
 
@@ -531,6 +551,7 @@ Returns boolean
 
 sub _lock {
     my ($fh) = @_;
+
     return _flock($fh, F_WRLCK);
 }
 
@@ -550,6 +571,7 @@ Returns boolean
 
 sub _unlock {
     my ($fh) = @_;
+
     return _flock($fh, F_UNLCK);
 }
 
@@ -563,6 +585,7 @@ sub level {
     my $self = shift;
     my @methods = reverse logging_methods();
     my %num_to_name = map {$_ => $methods[$_]} 0..$#methods;
+
     return $num_to_name{$self->{log_level}};
 }
 
