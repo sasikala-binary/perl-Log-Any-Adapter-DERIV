@@ -193,6 +193,10 @@ Unlock a file handler locked by fcntl
 
 Returns boolean
 
+## level
+
+Return the current log level name.
+
 # AUTHOR
 
 Deriv Group Services Ltd. `DERIV@cpan.org`

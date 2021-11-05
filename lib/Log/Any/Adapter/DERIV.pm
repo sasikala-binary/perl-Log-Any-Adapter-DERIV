@@ -133,6 +133,9 @@ our %SEVERITY_COLOUR = (
     critical => [qw(red bold)],
 );
 
+my @methods     = reverse logging_methods();
+my %num_to_name = map {$_ => $methods[$_]} 0..$#methods;
+
 # The obvious way to handle this might be to provide our own proxy class:
 #     $Log::Any::OverrideDefaultProxyClass = 'Log::Any::Proxy::DERIV';
 # but the handling for proxy classes is somewhat opaque - and there's an ordering problem
@@ -600,6 +603,17 @@ sub _unlock {
     my ($fh) = @_;
 
     return _flock($fh, F_UNLCK);
+}
+
+=head2 level
+
+Return the current log level name.
+
+=cut
+
+sub level {
+    my $self = shift;
+    return $num_to_name{$self->{log_level}};
 }
 
 1;
