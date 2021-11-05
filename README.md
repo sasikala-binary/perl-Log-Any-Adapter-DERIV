@@ -73,59 +73,69 @@ If no any parameter, then default \`stderr => 1\`;
 
 ## apply\_filehandle\_utf8
 
+Applies UTF-8 to filehandle if it is not utf-flavoured already
+
+    $object->apply_filehandle_utf8($fh);
+
 - `$fh` file handle
 
 ## format\_line
 
-Format the log entry
+Formatting the log entry with timestamp, from which the message populated,
+severity and message.
 
-- `$data` log data -severity, message, stack
-- `$opts` options - color
+If color/colour param passed it adds appropriate color code for timestamp,
+log level, from which this log message populated and actual message.
+For non-color mode, it just returns the formatted message.
 
-Returns the color details for log
+    $object->format_line($data, {color => $color});
+
+- `$data` hashref - The data with stack info like package method from
+which the message populated, timestamp, severity and message
+- `$opts` hashref - the options color
+
+Returns only formatted string if non-color mode. Otherwise returns formatted
+string with embedded ANSI color code using [Term::ANSIColor](https://metacpan.org/pod/Term%3A%3AANSIColor)
 
 ## log\_entry
 
-Writes the log entry
+Add format and add color code using `format_line` and writes the log entry
 
-- \*`$data` log data
+    $object->log_entry($data);
+
+- \*`$data` hashref - The log data
 
 ## \_process\_data
 
-Process the data before printing out.
+Process the data before printing out. Reduce the continues [Future](https://metacpan.org/pod/Future) stack
+messages and filter the messages based on log level.
 
-Takes the following arguments as named parameters:
+    $object->_process_data($data);
 
-- `$self`
-- `data`
+- `$data` hashref - The log data.
 
-    The log data.
-
-Returns processed data
+Returns a hashref - the processed data
 
 ## \_filter\_stack
 
-In some cases we don't want to print stack info. This function is used to filter out the stack info.
+Filter the stack message based on log level.
 
-Takes the following arguments as named parameters:
+    $object->_filter_stack($data);
 
-- `$self`
-- `data`
+- `$data` hashref - Log stack data
 
-    The log data.
-
-Returns processed data
+Returns hashref - the filtered data
 
 ## \_collapse\_future\_stack
 
-The future [FUTURE](https://metacpan.org/pod/FUTURE) frames are too much and too tedious. This method will keep only one
-frame if there are many continuously future frames.
+Go through the caller stack and if continuous [Future](https://metacpan.org/pod/Future) messages then keep
+only one at the first.
 
-Takes the following arguments as named parameters
+    $object->_collapse_future_stack($data);
 
-- `$data` Log stack data
+- `$data` hashref - Log stack data
 
-Returns log data
+Returns a hashref - the reduced log data
 
 ## \_fh\_is\_tty
 
@@ -134,14 +144,29 @@ Returns boolean
 
 ## \_in\_container
 
-Checks in the container
+Returns true if we think we are currently running in a container.
+
+At the moment this only looks for a `.dockerenv` file in the root directory;
+future versions may expand this to provide a more accurate check covering
+other container systems such as \`runc\`.
+
 Returns boolean
 
 ## \_linux\_flock\_data
 
+Based on the type of lock requested, it packs into linux binary flock structure
+and return the string of that structure.
+
+Linux struct flock: "s s l l i"
+	short l\_type short - Possible values: F\_RDLCK(0) - read lock, F\_WRLCK(1) - write lock, F\_UNLCK(2) - unlock
+	short l\_whence - starting offset
+	off\_t l\_start - relative offset
+	off\_t l\_len - number of consecutive bytes to lock
+	pid\_t l\_pid - process ID
+
 - `$type` lock type - F\_WRLCK or F\_UNLCK
 
-Returns a FLOCK structure
+Returns a string of the linux flock structure
 
 ## \_flock
 
@@ -167,10 +192,6 @@ Unlock a file handler locked by fcntl
 - `$fh` File handle
 
 Returns boolean
-
-## level
-
-return the current log level name
 
 # AUTHOR
 
