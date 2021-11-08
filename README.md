@@ -2,6 +2,8 @@
 
 Log::Any::Adapter::DERIV - standardised logging to STDERR and JSON file
 
+[![Test status](https://circleci.com/gh/binary-com/perl-Log-Any-Adapter-DERIV.svg?style=shield&circle-token=bed2af8f8e388746eafbbf905cf6990f84dbd69e)](https://app.circleci.com/pipelines/github/binary-com/perl-Log-Any-Adapter-DERIV)
+
 # SYNOPSIS
 
     use Log::Any;
@@ -140,6 +142,9 @@ Returns a hashref - the reduced log data
 ## \_fh\_is\_tty
 
 Check the filehandle opened to tty
+
+- `$fh` file handle
+
 Returns boolean
 
 ## \_in\_container
@@ -164,7 +169,7 @@ Linux struct flock: "s s l l i"
 	off\_t l\_len - number of consecutive bytes to lock
 	pid\_t l\_pid - process ID
 
-- `$type` lock type - F\_WRLCK or F\_UNLCK
+- `$type` integer lock type - F\_WRLCK or F\_UNLCK
 
 Returns a string of the linux flock structure
 

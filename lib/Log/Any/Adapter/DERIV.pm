@@ -18,6 +18,12 @@ use utf8;
 
 Log::Any::Adapter::DERIV - standardised logging to STDERR and JSON file
 
+=begin markdown
+
+[![Test status](https://circleci.com/gh/binary-com/perl-Log-Any-Adapter-DERIV.svg?style=shield&circle-token=bed2af8f8e388746eafbbf905cf6990f84dbd69e)](https://app.circleci.com/pipelines/github/binary-com/perl-Log-Any-Adapter-DERIV)
+
+=end markdown
+
 =head1 SYNOPSIS
 
     use Log::Any;
@@ -477,6 +483,13 @@ sub _collapse_future_stack {
 =head2 _fh_is_tty
 
 Check the filehandle opened to tty
+
+=over 4
+
+=item * C<$fh> file handle
+
+=back
+
 Returns boolean
 
 =cut
@@ -517,7 +530,7 @@ Linux struct flock: "s s l l i"
 
 =over 4
 
-=item * C<$type> lock type - F_WRLCK or F_UNLCK
+=item * C<$type> integer lock type - F_WRLCK or F_UNLCK
 
 =back
 
