@@ -2,5 +2,6 @@
 Revision history for {{$dist->name}}
 
 {{$NEXT}}
-    Add STDOUT
-    Initial version.
+    pod improvement
+0.001
+ Initial version.

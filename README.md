@@ -49,7 +49,7 @@ Although the module may not be directly useful, it is hoped that other teams may
 parts of the code useful for their own logging requirements.
 
 There is a public repository on Github, anyone is welcome to fork that and implement
-their own version or make feature/bugfix suggestions if they seem generally useful:
+their own version or make feature/bug fix suggestions if they seem generally useful:
 
 [https://github.com/binary-com/perl-Log-Any-Adapter-DERIV](https://github.com/binary-com/perl-Log-Any-Adapter-DERIV)
 
@@ -57,8 +57,8 @@ their own version or make feature/bugfix suggestions if they seem generally usef
 
 - json\_log\_file
 
-    Specify a file name that the json format log file will be printed into.
-    If not given, then a default file 'program\_name.json.log' will be used.
+    Specify a file name to which you want the json formatted logs printed into.
+    If not given, then it prints the logs to STDERR.
 
 - STDERR
 
@@ -67,11 +67,13 @@ their own version or make feature/bugfix suggestions if they seem generally usef
     If the value is json or text, then print logs with that format
 
     If the value is just a true value other than \`json\` or \`text\`,
-    then if it is running in a container, then the logs is \`json\` format.
-    Else if STDERR is a tty will be \`colored text\` format.
-    Else if will be a non-color text format.
+    then if it is running in a container, then it prints the logs in \`json\` format.
+    Else if STDERR is a tty, then it prints \`colored text\` format.
+    Else it prints non-color text format.
 
-If no any parameter, then default \`stderr => 1\`;
+If no parameters provided, then default \`stderr => 1\`;
+
+# METHODS
 
 ## apply\_filehandle\_utf8
 
