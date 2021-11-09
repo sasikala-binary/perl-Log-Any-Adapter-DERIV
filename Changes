@@ -3,5 +3,5 @@ Revision history for {{$dist->name}}
 
 {{$NEXT}}
     pod improvement
-0.001
+0.001   2021-10-28
  Initial version.
