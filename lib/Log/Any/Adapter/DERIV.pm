@@ -447,7 +447,6 @@ sub _flock {
     my $lock = _linux_flock_data($type);
     my $result = fcntl($fh, F_SETLKW, $lock);
     return $result if $result;
-    print STDERR "F_SETLKW @_: $!\n";
     return undef;
 }
 =head2 _lock
