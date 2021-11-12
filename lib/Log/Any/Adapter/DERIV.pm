@@ -565,8 +565,6 @@ sub _flock {
 
     return $result if $result;
 
-    print STDERR "F_SETLKW @_: $!\n";
-
     return undef;
 }
 
