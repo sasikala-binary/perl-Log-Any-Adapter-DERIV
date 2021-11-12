@@ -1,7 +1,9 @@
 
-Revision history for {{$dist->name}}
+Revision history for Log-Any-Adapter-DERIV
 
 {{$NEXT}}
     pod improvement
-0.001   2021-10-28
- Initial version.
+
+0.001   2021-10-28 05:30:00+00:00 UTC
+    Add STDOUT
+    Initial version.
